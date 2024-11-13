@@ -1,6 +1,6 @@
 import { icons } from "@/constants";
 import { Tabs } from "expo-router";
-import { Image, ImageSourcePropType, View } from "react-native";
+import { Image, ImageSourcePropType, Platform, View } from "react-native";
 import "react-native-reanimated";
 
 const TabIcon = ({
@@ -29,22 +29,24 @@ const TabIcon = ({
 const Layout = () => {
   return (
     <Tabs
-      initialRouteName="index"
+      initialRouteName="home"
       screenOptions={{
         tabBarActiveTintColor: "white",
         tabBarInactiveTintColor: "white",
         tabBarShowLabel: false,
+        tabBarIconStyle: {
+          paddingBottom: Platform.OS === "android" ? 28 : 26,
+        },
         tabBarStyle: {
           backgroundColor: "#333333",
           borderRadius: 50,
-          paddingBottom: 0,
+          paddingBottom: 0, // ios only
           overflow: "hidden",
           marginHorizontal: 20,
           marginBottom: 20,
           height: 78,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           flexDirection: "row",
           position: "absolute",
         },
