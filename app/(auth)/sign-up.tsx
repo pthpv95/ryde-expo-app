@@ -7,7 +7,64 @@ import CustomButton from "../components/CustomButton";
 import OAuth from "../components/OAuth";
 import { useSignUp } from "@clerk/clerk-expo";
 import ReactNativeModal from "react-native-modal";
+import { fetchAPI } from "../libs/fetch";
 
+const VerificationContent = ({
+  pendingVerification,
+  setPendingVerification,
+  onPressVerify,
+}: any) => {
+  return (
+    <View className="bg-white px-7 py-9 rounded-2xl min-h-[350px]">
+      <Text className="text-2xl text-center font-JakartaExtraBold mb-2">
+        Verification
+      </Text>
+      <Text className="text-JakartaSemiBold mb-5">
+        We're sent a verification code to your email
+      </Text>
+
+      <InputField
+        label="Code"
+        value={pendingVerification.code}
+        placeholder="123456"
+        keyboardType="numeric"
+        icon={icons.lock}
+        onChangeText={(value) =>
+          setPendingVerification({ ...pendingVerification, code: value })
+        }
+      />
+      {pendingVerification.error && (
+        <Text className="text-red-500 text-center">
+          {pendingVerification.error}
+        </Text>
+      )}
+
+      <CustomButton
+        title="Verify email"
+        onPress={onPressVerify}
+        className="mt-5 bg-success-500"
+      />
+    </View>
+  );
+};
+
+const SuccessContent = ({ closeModal }: any) => {
+  return (
+    <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
+      <Image
+        source={images.check}
+        className="w-[110px] h-[110px] mx-auto my-5"
+      />
+      <Text className="text-3xl text-center font-JakartaSemiBold">
+        Verified
+      </Text>
+      <Text className="text-base text-gray-400 text-center mt-2">
+        You have successfully verified your email
+      </Text>
+      <CustomButton title="Browse home" onPress={closeModal} className="mt-5" />
+    </View>
+  );
+};
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
   const [pendingVerification, setPendingVerification] = useState({
@@ -15,7 +72,6 @@ const SignUp = () => {
     error: "",
     state: "default",
   });
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -58,18 +114,21 @@ const SignUp = () => {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code: pendingVerification.code,
       });
-      console.log("🚀 ~ onPressVerify ~ completeSignUp:", completeSignUp);
 
       if (completeSignUp.status === "complete") {
-        // todo: add user to database
-
+        await fetchAPI(`/(api)/user`, {
+          method: "POST",
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            clerkId: completeSignUp.createdUserId,
+          }),
+        });
         await setActive({ session: completeSignUp.createdSessionId });
         setPendingVerification((prev) => ({
           ...prev,
           state: "success",
-          error: "",
         }));
-        // router.replace("/(root)/(tabs)/home");
       } else {
         setPendingVerification((prev) => ({
           ...prev,
@@ -148,67 +207,29 @@ const SignUp = () => {
 
         {/* verification modal */}
         <ReactNativeModal
-          isVisible={pendingVerification.state === "pending"}
-          onModalHide={() => {
-            if (pendingVerification.state === "success") {
-              setShowSuccessModal(true);
-            }
-          }}
+          isVisible={
+            pendingVerification.state === "pending" ||
+            pendingVerification.state === "success"
+          }
         >
-          <View className="bg-white px-7 py-9 rounded-2xl min-h-[350px]">
-            <Text className="text-2xl text-center font-JakartaExtraBold mb-2">
-              Verification
-            </Text>
-            <Text className="text-JakartaSemiBold mb-5">
-              We're sent a verification code to your email
-            </Text>
-
-            <InputField
-              label="Code"
-              value={pendingVerification.code}
-              placeholder="123456"
-              keyboardType="numeric"
-              icon={icons.lock}
-              onChangeText={(value) =>
-                setPendingVerification({ ...pendingVerification, code: value })
-              }
+          {pendingVerification.state === "pending" && (
+            <VerificationContent
+              pendingVerification={pendingVerification}
+              setPendingVerification={setPendingVerification}
+              onPressVerify={onPressVerify}
             />
-            {pendingVerification.error && (
-              <Text className="text-red-500 text-center">
-                {pendingVerification.error}
-              </Text>
-            )}
-
-            <CustomButton
-              title="Verify email"
-              onPress={onPressVerify}
-              className="mt-5 bg-success-500"
-            />
-          </View>
-        </ReactNativeModal>
-
-        {/* Success modal */}
-        <ReactNativeModal isVisible={showSuccessModal}>
-          <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
-            <Image
-              source={images.check}
-              className="w-[110px] h-[110px] mx-auto my-5"
-            />
-            <Text className="text-3xl text-center font-JakartaSemiBold">
-              Verified
-            </Text>
-            <Text className="text-base text-gray-400 text-center mt-2">
-              You have successfully verified your email
-            </Text>
-            <CustomButton
-              title="Browse home"
-              onPress={() => {
-                setShowSuccessModal(false);
+          )}
+          {pendingVerification.state === "success" && (
+            <SuccessContent
+              closeModal={() => {
+                setPendingVerification((prev) => ({
+                  ...prev,
+                  state: "default",
+                }));
                 router.push("/(root)/(tabs)/home");
               }}
-              className="mt-5"
             />
-          </View>
+          )}
         </ReactNativeModal>
       </View>
     </ScrollView>
